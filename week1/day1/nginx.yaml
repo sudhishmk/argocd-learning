@@ -1,0 +1,20 @@
+# week1/day1/nginx.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-frontend
+  template:
+    metadata:
+      labels:
+        app: echo-frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25 # Using a specific version is good practice
+        ports:
+        - containerPort: 80
