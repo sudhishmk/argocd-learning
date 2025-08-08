@@ -14,10 +14,10 @@ spec:
         app: echo-frontend
     spec:
       securityContext:
-        runAsUser: 101 # User ID for the www-data user in the standard nginx image
+        runAsUser: 101 # User ID for the www-data user in the standard nginx image now
         runAsGroup: 101
       containers:
       - name: nginx
-        image: nginx:1.25 # Using a specific version is good practice
+        image: nginx:1.25 # Using a specific version is good practice 
         ports:
         - containerPort: 80
