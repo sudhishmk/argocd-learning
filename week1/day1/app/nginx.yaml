@@ -19,7 +19,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: nginx
-        image: bitnami/nginx:1.25 # Using a specific version is good practice
+        image: public.ecr.aws/bitnami/nginx:1.25 # Using a specific version is good practice
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
