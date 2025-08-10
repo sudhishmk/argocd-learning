@@ -1,0 +1,36 @@
+# week1/day1/nginx.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-frontend
+  template:
+    metadata:
+      labels:
+        app: echo-frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: nginx
+        image: public.ecr.aws/bitnami/nginx:1.25 # Using a specific version is good practice
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL # Drop all linux capabilities
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-index
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: nginx-index
+        configMap:
+          name: nginx-config
