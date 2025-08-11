@@ -41,25 +41,34 @@ Today, you'll refactor your Nginx deployment into a proper Helm chart and manage
     * Delete the default files in the `templates/` directory (like `serviceaccount.yaml`, `hpa.yaml`, `ingress.yaml`).
     * Modify `templates/deployment.yaml` to be a simple Nginx deployment. Crucially, parameterize the replica count. The file should look like this:
         ```yaml
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          name: {{ .Release.Name }}-deployment
-        spec:
-          replicas: {{ .Values.replicaCount }}
-          selector:
-            matchLabels:
-              app: {{ .Release.Name }}
-          template:
-            metadata:
-              labels:
-                app: {{ .Release.Name }}
-            spec:
-              containers:
-              - name: nginx
-                image: "nginx:1.25"
-                ports:
-                - containerPort: 80
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-deployment
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: nginx
+        image: "public.ecr.aws/bitnami/nginx:1.25"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 80
         ```
     * Update `values.yaml` to contain the `replicaCount` key:
         ```yaml
