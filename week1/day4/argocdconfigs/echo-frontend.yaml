@@ -10,9 +10,6 @@ spec:
     repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
     path: 'week1/day4/app/overlays/dev'
     targetRevision: HEAD
-    helm:
-      values: |
-        replicaCount: 2
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: frontend
