@@ -41,9 +41,9 @@ spec:
 ---
 ## 🛠️ Daily Task
 
-Today's task is to enable automation and see self-healing in action.
+Today's task is to enable automation and see self-healing in action. Copy the content from day1 to day2
 
-1.  **Create a `ConfigMap`**: In your Git repo, inside the `week1/day1/` directory, create a new file named `configmap.yaml` with the following content:
+1.  **Create a `ConfigMap`**: In your Git repo, inside the `week1/day2/` directory, create a new file named `configmap.yaml` with the following content:
     ```yaml
     apiVersion: v1
     kind: ConfigMap
