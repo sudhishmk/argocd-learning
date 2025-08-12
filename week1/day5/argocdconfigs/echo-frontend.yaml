@@ -8,7 +8,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
-    path: 'week1/day4/app/overlays/dev'
+    path: 'week1/day5/app/overlays/dev'
     targetRevision: HEAD
   destination:
     server: 'https://kubernetes.default.svc'
