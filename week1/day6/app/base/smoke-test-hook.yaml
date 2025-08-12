@@ -1,0 +1,30 @@
+# week1/day6/app/base/preflight-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: smoke-test-
+  annotations:
+    # This is a PostSync hook
+    argocd.argoproj.io/hook: PostSync
+    # Delete the Job pod after it succeeds
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      # Pod-level security context to satisfy policy requirements
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: curl-test
+        image: docker.io/curlimages/curl:7.72.0@sha256:bd5bbd35f89b867c1dccbc84b8be52f3f74dea20b46c5fe0db3780e040afcb6f" #tag: 7.72.0
+        # This command will try to curl the service. Replace 'echo-frontend' if your service is named differently.
+        command: ["sh", "-c", "echo 'Running smoke test...'; sleep 5; curl http://echo-frontend; echo 'Test complete!'"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL # Drop all linux capabilities
+      restartPolicy: OnFailure
+  backoffLimit: 1

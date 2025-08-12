@@ -1,0 +1,8 @@
+# week1/day6/app/base/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+- preflight-job.yaml 
+- service.yaml         # Add this
+- smoke-test-hook.yaml # Add this
