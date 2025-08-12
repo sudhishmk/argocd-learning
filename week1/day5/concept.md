@@ -42,9 +42,9 @@ metadata:
 
 Today, you'll add a "pre-flight" check `Job` to your Kustomize application and use a sync wave to ensure it runs before the main deployment.
 
-1.  **Create the Job Manifest**: In your `week1/day4/base` directory, create a new file named `preflight-job.yaml`. This `Job` will simulate a check that needs to run before your application starts.
+1.  **Create the Job Manifest**: In your `week1/day5/app/base` directory, create a new file named `preflight-job.yaml`. This `Job` will simulate a check that needs to run before your application starts.
     ```yaml
-    # week1/day4/base/preflight-job.yaml
+    # week1/day5/app/base/preflight-job.yaml
     apiVersion: batch/v1
     kind: Job
     metadata:
@@ -60,9 +60,9 @@ Today, you'll add a "pre-flight" check `Job` to your Kustomize application and u
       backoffLimit: 1
     ```
 
-2.  **Update Kustomization**: Add the new `Job` to your `week1/day4/base/kustomization.yaml` file.
+2.  **Update Kustomization**: Add the new `Job` to your `week1/day5/app/base/kustomization.yaml` file.
     ```yaml
-    # week1/day4/base/kustomization.yaml
+    # week1/day5/app/base/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
@@ -73,7 +73,7 @@ Today, you'll add a "pre-flight" check `Job` to your Kustomize application and u
 3.  **Annotate Your Resources**:
     * Add a `sync-wave` annotation to your new `preflight-job.yaml` so it runs first.
         ```yaml
-        # week1/day4/base/preflight-job.yaml
+        # week1/day5/app/base/preflight-job.yaml
         apiVersion: batch/v1
         kind: Job
         metadata:
@@ -84,7 +84,7 @@ Today, you'll add a "pre-flight" check `Job` to your Kustomize application and u
         ```
     * Add a `sync-wave` annotation to your `deployment.yaml` in the same `base` directory so it runs second.
         ```yaml
-        # week1/day4/base/deployment.yaml
+        # week1/day5/app/base/deployment.yaml
         apiVersion: apps/v1
         kind: Deployment
         metadata:
