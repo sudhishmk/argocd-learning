@@ -50,7 +50,7 @@ The final week dives into day-2 operations, performance tuning, and the most adv
 ## 📂 Recommended Repository Structure
 
 As you progress through the daily tasks, your repository will grow. It's recommended to follow a structure similar to this for clarity:
-
+```
 argocd-learning/
 ├── app-of-apps/
 │   └── root-app.yaml         # For the final App of Apps pattern
@@ -68,7 +68,7 @@ argocd-learning/
 │           ├── patch.yaml
 │           └── kustomization.yaml
 └── README.md                 # This file
-
+```
 ---
 ## ✨ Final Goal
 
