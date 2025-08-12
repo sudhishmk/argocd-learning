@@ -40,24 +40,39 @@ metadata:
 ```
 ### 🛠️ Daily Task
 
-Today, you'll add a "pre-flight" check `Job` to your Kustomize application and use a sync wave to ensure it runs before the main deployment.
+Today, you'll add a "pre-flight" check `Job` to your Kustomize application and use a sync wave to ensure it runs before the main deployment. Copy content from day4 to day5
 
 1.  **Create the Job Manifest**: In your `week1/day5/app/base` directory, create a new file named `preflight-job.yaml`. This `Job` will simulate a check that needs to run before your application starts.
     ```yaml
     # week1/day5/app/base/preflight-job.yaml
-    apiVersion: batch/v1
-    kind: Job
-    metadata:
-      name: preflight-check
+# week1/day5/app/base/preflight-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preflight-check
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  template:
     spec:
-      template:
-        spec:
-          containers:
-          - name: checker
-            image: busybox:1.35
-            command: ["sh", "-c", "echo 'Running pre-flight checks...'; sleep 15; echo 'Checks complete!'"]
-          restartPolicy: Never
-      backoffLimit: 1
+      # Pod-level security context to satisfy policy requirements
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: checker
+        image: registry.connect.redhat.com/sumologic/busybox:1.37.0-ubi
+        command: ["sh", "-c", "echo 'Running pre-flight checks...'; sleep 15; echo 'Checks complete!'"]
+        
+        # Container-level security context for fine-grained control
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL # Drop all linux capabilities
+      restartPolicy: OnFailure
+  backoffLimit: 1
     ```
 
 2.  **Update Kustomization**: Add the new `Job` to your `week1/day5/app/base/kustomization.yaml` file.
@@ -96,7 +111,7 @@ Today, you'll add a "pre-flight" check `Job` to your Kustomize application and u
 
 4.  **Commit and Sync**:
     * Commit and push your changes to Git.
-    * In the Argo CD UI, press `Refresh` on your application. It will show as `OutOfSync`.
+    * In the Argo CD UI, change source of application to day5 from day4. Press `Refresh` on your application. It will show as `OutOfSync`.
     * Press `Sync`. Observe the resources carefully. You will see the `Job` get created and run first. The `Deployment` will wait until the `Job` completes successfully before it is synced.
 
 ---
