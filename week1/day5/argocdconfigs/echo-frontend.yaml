@@ -1,0 +1,21 @@
+# app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: echo-frontend
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
+    path: 'week1/day4/app/overlays/dev'
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: frontend
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

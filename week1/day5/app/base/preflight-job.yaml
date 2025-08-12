@@ -1,0 +1,16 @@
+# week1/day5/app/base/preflight-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preflight-check
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  template:
+    spec:
+      containers:
+      - name: checker
+        image: registry.connect.redhat.com/sumologic/busybox:1.37.0-ubi
+        command: ["sh", "-c", "echo 'Running pre-flight checks...'; sleep 15; echo 'Checks complete!'"]
+      restartPolicy: Never
+  backoffLimit: 1
