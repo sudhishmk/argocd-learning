@@ -21,7 +21,7 @@ This YAML shows how the `source` of an `Application` is configured to use a Helm
 spec:
   source:
     repoURL: '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
-    path: 'week1/day3/echo-frontend' # The directory containing the Chart.yaml
+    path: 'week1/day3/app/echo-frontend' # The directory containing the Chart.yaml
     targetRevision: HEAD
     helm:
       values: |
@@ -86,7 +86,7 @@ spec:
       project: default
       source:
         repoURL: '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
-        path: 'week1/day3/echo-frontend'
+        path: 'week1/day3/app/echo-frontend'
         targetRevision: HEAD
         helm:
           values: |
