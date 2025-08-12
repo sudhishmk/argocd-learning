@@ -32,14 +32,14 @@ patchesStrategicMerge:
 Today, you'll convert your application structure from Helm to Kustomize to manage a `dev` environment.
 
 1.  **Create the Kustomize Structure**: In your `argocd-learning` Git repository, create a new directory structure:
-    * `week1/day4/base`
-    * `week1/day4/overlays/dev`
+    * `week1/day4/app/base`
+    * `week1/day4/app/overlays/dev`
 
 2.  **Populate the `base`**:
     * Move a simplified version of your Nginx `deployment.yaml` into the `base` directory.
     * Create a `kustomization.yaml` file inside the `base` directory to list the resources:
         ```yaml
-        # week1/day4/base/kustomization.yaml
+        # week1/day4/app/base/kustomization.yaml
         apiVersion: kustomize.config.k8s.io/v1beta1
         kind: Kustomization
         resources:
@@ -49,7 +49,7 @@ Today, you'll convert your application structure from Helm to Kustomize to manag
 3.  **Configure the `dev` Overlay**:
     * Create the `kustomization.yaml` file inside the `overlays/dev` directory. This tells Kustomize to use the `base` and apply a patch.
         ```yaml
-        # week1/day4/overlays/dev/kustomization.yaml
+        # week1/day4/app/overlays/dev/kustomization.yaml
         apiVersion: kustomize.config.k8s.io/v1beta1
         kind: Kustomization
         resources:
@@ -59,7 +59,7 @@ Today, you'll convert your application structure from Helm to Kustomize to manag
         ```
     * Create the patch file, `deployment-patch.yaml`, in the same directory. This patch will set the replica count specifically for the `dev` environment.
         ```yaml
-        # week1/day4/overlays/dev/deployment-patch.yaml
+        # week1/day4/app/overlays/dev/deployment-patch.yaml
         apiVersion: apps/v1
         kind: Deployment
         metadata:
@@ -74,7 +74,7 @@ Today, you'll convert your application structure from Helm to Kustomize to manag
     spec:
       source:
         repoURL: '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
-        path: 'week1/day4/overlays/dev'
+        path: 'week1/day4/app/overlays/dev'
         targetRevision: HEAD
       # ... rest of the file
     ```
