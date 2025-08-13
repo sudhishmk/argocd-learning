@@ -10,9 +10,6 @@ spec:
     repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
     path: 'week1/day7/app/overlays/dev'
     targetRevision: HEAD
-    directory:
-      # Add this block to exclude production files
-      exclude: '*.prod.yaml'
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: frontend

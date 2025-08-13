@@ -58,7 +58,22 @@ spec:
 
 Today, you'll add a `PostSync` hook to your Kustomize application to run a simple smoke test.
 
-1.  **Create the Hook Manifest**: In your `week1/day6/app/base` directory, create a new file named `smoke-test-hook.yaml`. This `Job` will try to curl the Nginx service. *Note: For this to work, you need a `Service` for your deployment.* If you don't have one, create a simple `service.yaml` in your `base` as well.
+1.  **Copy Previous Work**: In your Git repository, make a copy of your work from Day 5 to create a new directory for today's task.
+    ```bash
+    cp -r week1/day5/ week1/day6/
+    ```
+
+2.  **Update Application Path**: Modify your local `app.yaml` file to point to the new `day7` directory. Apply this change so Argo CD starts watching the new path.
+    ```yaml
+    # In your local app.yaml
+    spec:
+      source:
+        # Change day5 to day6
+        path: 'week1/day6/overlays/dev' 
+    #...
+    ```
+
+3.  **Create the Hook Manifest**: In your `week1/day6/app/base` directory, create a new file named `smoke-test-hook.yaml`. This `Job` will try to curl the Nginx service. *Note: For this to work, you need a `Service` for your deployment.* If you don't have one, create a simple `service.yaml` in your `base` as well.
 
     ```yaml
     # week1/day6/app/base/smoke-test-hook.yaml
@@ -97,7 +112,7 @@ Today, you'll add a `PostSync` hook to your Kustomize application to run a simpl
         targetPort: 80
     ```
 
-2.  **Update Kustomization**: Add both the `service.yaml` and `smoke-test-hook.yaml` to your `week1/day6/app/base/kustomization.yaml` file.
+4.  **Update Kustomization**: Add both the `service.yaml` and `smoke-test-hook.yaml` to your `week1/day6/app/base/kustomization.yaml` file.
 
     ```yaml
     # week1/day6/app/base/kustomization.yaml
@@ -110,7 +125,7 @@ Today, you'll add a `PostSync` hook to your Kustomize application to run a simpl
     - smoke-test-hook.yaml # Add this
     ```
 
-3.  **Commit and Sync**:
+5.  **Commit and Sync**:
     * Commit and push your changes to Git.
     * In the Argo CD UI, `Refresh` and `Sync` your application.
     * Watch the sync process. After the `Deployment` and `Service` are healthy, you will see a new `Job` created by the hook. It will run its course, and because of the delete policy, it will disappear from the UI once it's finished successfully.

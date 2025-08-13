@@ -42,7 +42,21 @@ metadata:
 
 Today, you'll add a "pre-flight" check `Job` to your Kustomize application and use a sync wave to ensure it runs before the main deployment. Copy content from day4 to day5
 
-1.  **Create the Job Manifest**: In your `week1/day5/app/base` directory, create a new file named `preflight-job.yaml`. This `Job` will simulate a check that needs to run before your application starts.
+1.  **Copy Previous Work**: In your Git repository, make a copy of your work from Day 4 to create a new directory for today's task.
+    ```bash
+    cp -r week1/day4/ week1/day5/
+    ```
+
+2.  **Update Application Path**: Modify your local `app.yaml` file to point to the new `day7` directory. Apply this change so Argo CD starts watching the new path.
+    ```yaml
+    # In your local app.yaml
+    spec:
+      source:
+        # Change day4 to day5
+        path: 'week1/day5/overlays/dev' 
+    #...
+    ```
+3.  **Create the Job Manifest**: In your `week1/day5/app/base` directory, create a new file named `preflight-job.yaml`. This `Job` will simulate a check that needs to run before your application starts.
     ```yaml
     # week1/day5/app/base/preflight-job.yaml
 # week1/day5/app/base/preflight-job.yaml
@@ -75,7 +89,7 @@ spec:
   backoffLimit: 1
     ```
 
-2.  **Update Kustomization**: Add the new `Job` to your `week1/day5/app/base/kustomization.yaml` file.
+4.  **Update Kustomization**: Add the new `Job` to your `week1/day5/app/base/kustomization.yaml` file.
     ```yaml
     # week1/day5/app/base/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
@@ -85,7 +99,7 @@ spec:
     - preflight-job.yaml # Add this line
     ```
 
-3.  **Annotate Your Resources**:
+5.  **Annotate Your Resources**:
     * Add a `sync-wave` annotation to your new `preflight-job.yaml` so it runs first.
         ```yaml
         # week1/day5/app/base/preflight-job.yaml
@@ -109,7 +123,7 @@ spec:
         #...
         ```
 
-4.  **Commit and Sync**:
+6.  **Commit and Sync**:
     * Commit and push your changes to Git.
     * In the Argo CD UI, change source of application to day5 from day4. Press `Refresh` on your application. It will show as `OutOfSync`.
     * Press `Sync`. Observe the resources carefully. You will see the `Job` get created and run first. The `Deployment` will wait until the `Job` completes successfully before it is synced.
