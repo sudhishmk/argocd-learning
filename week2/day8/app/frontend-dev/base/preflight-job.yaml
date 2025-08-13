@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preflight-check
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  template:
+    spec:
+      # Pod-level security context to satisfy policy requirements
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: checker
+        image: registry.connect.redhat.com/sumologic/busybox:1.37.0-ubi
+        command: ["sh", "-c", "echo 'Running pre-flight checks...'; sleep 15; echo 'Checks complete!'"]
+        
+        # Container-level security context for fine-grained control
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL # Drop all linux capabilities
+      restartPolicy: OnFailure
+  backoffLimit: 1
