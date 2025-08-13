@@ -19,7 +19,7 @@ spec:
       - name: curl-test
         image: docker.io/curlimages/curl:7.72.0@sha256:bd5bbd35f89b867c1dccbc84b8be52f3f74dea20b46c5fe0db3780e040afcb6f #tag: 7.72.0
         # This command will try to curl the service. Replace 'echo-frontend' if your service is named differently.
-        command: ["sh", "-c", "echo 'Running smoke test...'; sleep 5; curl http://echo-frontend; echo 'Test complete!'"]
+        command: ["sh", "-c", "echo 'Running smoke test...'; sleep 4; curl http://echo-frontend; echo 'Test complete!'"]
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
