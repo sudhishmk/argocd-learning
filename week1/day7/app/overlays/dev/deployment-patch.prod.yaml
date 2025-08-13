@@ -1,0 +1,7 @@
+# week1/day4/overlays/dev/deployment-patch.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-frontend # Must match the name in the base deployment.yaml
+spec:
+  replicas: 2 # Prod environment gets 2 replica
