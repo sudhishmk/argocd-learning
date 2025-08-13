@@ -47,7 +47,7 @@ spec:
         spec:
           source:
             repoURL: '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
-            path: 'week1/day4/overlays/dev'
+            path: 'week1/day7/overlays/dev'
             targetRevision: HEAD
             directory:
               # Add this block to exclude production files

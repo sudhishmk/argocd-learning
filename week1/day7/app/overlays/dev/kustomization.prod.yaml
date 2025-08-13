@@ -4,4 +4,4 @@ kind: Kustomization
 resources:
 - ../../base
 patchesStrategicMerge:
-- deployment-patch.yaml
+- deployment-patch.prod.yaml
