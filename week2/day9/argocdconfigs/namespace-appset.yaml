@@ -15,7 +15,7 @@ spec:
       source:
         repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
         targetRevision: HEAD
-        path: 'week2/day9/cluster-resources'
+        path: 'week2/day9/app/cluster-resources'
       destination:
         server: '{{server}}'
         # Note: For a namespace, the destination namespace doesn't matter,
