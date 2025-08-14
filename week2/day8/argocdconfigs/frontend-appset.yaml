@@ -2,11 +2,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: echo-frontend-appset
-  namespace: argocd
+  namespace: openshift-gitops
 spec:
   generators:
   - git:
-      repoURL: 'https://github.com/YOUR_USERNAME/argocd-learning.git'
+      repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
       revision: HEAD
       directories:
       - path: week2/day8/app/*
@@ -16,9 +16,9 @@ spec:
     spec:
       project: default
       source:
-        repoURL: 'https://github.com/YOUR_USERNAME/argocd-learning.git'
+        repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
         targetRevision: HEAD
-        path: '{{path}}/overlays/dev' # Or '{{path}}/overlays/staging' if you renamed it
+        path: '{{path}}/overlays/dev' 
       destination:
         server: 'https://kubernetes.default.svc'
         namespace: '{{path.basename}}'
