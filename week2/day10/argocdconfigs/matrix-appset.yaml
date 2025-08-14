@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: matrix-frontend
+  namespace: argocd
+spec:
+  generators:
+  - matrix:
+      generators:
+        # Generator A: Git, finds the application directory
+        - git:
+            repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
+            revision: HEAD
+            directories:
+            - path: week2/day10/app/*
+        # Generator B: List, defines our environments
+        - list:
+            elements:
+            - env: dev
+              replicas: 1
+            - env: staging
+              replicas: 3
+  template:
+    metadata:
+      # e.g., 'echo-frontend-dev'
+      name: '{{path.basename}}-{{env}}'
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
+        targetRevision: HEAD
+        path: '{{path}}/overlays/dev'
+        kustomize:
+          # This overrides the replica count in the patch file!
+          replicas:
+          - name: echo-frontend
+            count: '{{replicas}}'
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: '{{path.basename}}-{{env}}' # e.g., 'echo-frontend-dev'
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
+        syncOptions: [CreateNamespace=true]
