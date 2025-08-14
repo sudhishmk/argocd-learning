@@ -13,7 +13,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
+        repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
         targetRevision: HEAD
         path: 'week2/day9/cluster-resources'
       destination:
