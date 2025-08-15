@@ -1,127 +1,91 @@
-# Week 2, Day 11: Progressive Delivery with Argo Rollouts (Revised)
+# Week 2, Day 12: Customizing Diffs to Ignore Changes
 
 ---
 ## 🧠 Concept of the Day
 
-While Argo CD is excellent at synchronizing your desired state from Git, it doesn't natively handle advanced deployment strategies like **Canary** or **Blue-Green** releases. For that, we use another tool from the Argo family: **Argo Rollouts**.
+Sometimes, you'll see an application in Argo CD marked as `OutOfSync` even though you haven't changed anything in Git. This often happens when in-cluster controllers, like admission webhooks, automatically modify resources *after* they're created. These modifications can include adding default values, injecting sidecar containers (e.g., for a service mesh), or adding labels.
 
-Argo Rollouts is a separate Kubernetes controller that provides a new Custom Resource called `Rollout`. A `Rollout` resource looks almost identical to a standard `Deployment` but includes a `strategy` block where you can define progressive delivery steps.
-
-Argo CD's role is to sync the `Rollout` manifest from Git. Once that's applied, the Argo Rollouts controller takes over, executing the canary or blue-green strategy. Argo CD understands the health of `Rollout` resources and will show the application as `Progressing` until the rollout is fully complete and promoted.
+Argo CD's **`ignoreDifferences`** feature solves this problem. By adding this block to your `Application` spec, you can provide a list of JSON Pointers that identify specific fields Argo CD should completely ignore when comparing the live state in the cluster to the desired state in Git. This allows you to eliminate "diff noise" from automated, cluster-side changes.
 
 ---
 ## 💼 Real-World Use Case
 
-You're releasing a new version of a critical payment processing API. A standard rolling update is too risky as it could impact all users if there's a bug.
+A team uses the Istio service mesh, which has a mutating admission webhook that automatically injects an `istio-proxy` sidecar container into every pod. In Git, their `Rollout` manifest only defines their main application container. In the cluster, the live pods have two containers.
 
-Instead, you use a `Rollout` object to perform a canary release. The strategy is defined to:
-1.  Deploy the new version and send 5% of live traffic to it.
-2.  Pause for 10 minutes while automated analysis checks Prometheus for an increase in error rates.
-3.  If the analysis passes, gradually increase traffic to 100% over 20 minutes.
-4.  If the analysis fails at any point, automatically roll back to the stable version.
-
-This significantly reduces the risk (blast radius) of a bad release.
+This causes Argo CD to constantly report the application as `OutOfSync`. The team adds an `ignoreDifferences` rule to their `Application` manifest to ignore the `spec.template.spec.containers[1]` path, effectively telling Argo CD, "Don't worry about the second container in the pod; I know it's supposed to be there."
 
 ---
 ## 💻 Code/Config Example
 
-This `Rollout` manifest replaces a standard `Deployment`. It defines a simple canary strategy that pauses after sending 20% of traffic to the new version, requiring manual promotion to continue.
+This `Application` manifest is configured to ignore any changes made to the `replicas` field of a `Deployment`. This is useful if a Horizontal Pod Autoscaler (HPA) is managing the replica count.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
-kind: Rollout
-metadata:
-  name: my-app-rollout
+kind: Application
+# ...
 spec:
-  replicas: 5
-  selector: # ... selector ...
-  template: # ... pod template ...
-  strategy:
-    canary:
-      steps:
-      - setWeight: 20
-      - pause: {} # Pauses indefinitely until manually promoted
-```
+  # ...
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas
+    ```
 
 ### 🛠️ Daily Task
 
-Today, you'll convert your `echo-frontend` `Deployment` into a `Rollout` and correctly update your Kustomize overlay to match.
+Today, you'll simulate an admission webhook adding a label to your `Rollout` and then use `ignoreDifferences` to make Argo CD accept this change.
 
-1.  **Install Argo Rollouts Controller**: This is a one-time setup. The controller must be running in your cluster.
+1.  **Repo Setup**: Copy your work from Day 11 to a new directory for today's task.
     ```bash
-    kubectl create namespace argo-rollouts
-    kubectl apply -n argo-rollouts -f [https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml](https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml)
+    cp -r week2/day11/ week2/day12/
     ```
 
-2.  **Repo Setup**: Copy your work from Day 8 to a new directory for today's task.
-    ```bash
-    cp -r week2/day8/ week2/day11/
-    ```
-
-3.  **Convert Base Resource to a Rollout**: In your new `week2/day11/app/frontend-dev/base/`, rename `deployment.yaml` to `rollout.yaml` and change its content to be a `Rollout` resource. Also update the `kustomization.yaml` in the `base` to point to the new filename.
+2.  **Update ApplicationSet Path**: Modify your local `frontend-appset.yaml` (from Day 8) to point its `path` to the new `week2/day12/apps/*` directory. Commit your new `week2/day12` folder to Git and apply the `ApplicationSet` change. 
     ```yaml
-
-    apiVersion: argoproj.io/v1alpha1
-    kind: Rollout
-    metadata:
-      name: echo-frontend
+    # In frontend-appset.yaml
     spec:
-      replicas: 1 # This will be patched by Kustomize
-      selector:
-        matchLabels:
-          app: echo-frontend
+      generators:
+      - git:
+          # ...
+          directories:
+          - path: week2/day12/apps/* # Update this path
+      # ...
+    ```
+
+3.  **Simulate a Mutating Webhook**: Manually add a label to your `frontend-dev` `Rollout` resource directly in the cluster. This mimics what an automated controller might do. 
+    ```bash
+    kubectl label rollout echo-frontend -n frontend-dev mutated-by=webhook
+    ```
+
+4.  **Observe the `OutOfSync` State or Auto healing**: Go to the Argo CD UI and `Refresh` the `frontend-dev` application. You'll see it is now `OutOfSync` or would start self heal if "auto-sync" and "self-heal" enabled because it has detected a label that doesn't exist in your Git repository.
+
+5.  **Apply the Fix**: Modify your `frontend-appset.yaml` again. Add an `ignoreDifferences` block to the `template` to tell Argo CD to ignore this specific label on all `Rollout` resources created by this `ApplicationSet`.
+    ```yaml
+    # In frontend-appset.yaml
+    # ...
       template:
         metadata:
-          labels:
-            app: echo-frontend
+          name: '{{path.basename}}'
         spec:
-          containers:
-          - name: nginx
-            image: nginx:1.25
-            ports:
-            - containerPort: 80
-      strategy:
-        canary:
-          steps:
-          - setWeight: 25
-          - pause: { duration: 30s }
+          project: default
+          # Add this ignoreDifferences block
+          ignoreDifferences:
+          - group: argoproj.io
+            kind: Rollout
+            jsonPointers:
+            - /metadata/labels/mutated-by
+          # ... rest of the spec
     ```
 
-4.  **Update Kustomize Overlay (The Fix!)**: Your overlay is still trying to patch a `Deployment`. You must update it to patch the `Rollout`. Go into `week2/day11/app/frontend-dev/overlays/dev/`.
-    * Rename `deployment-patch.yaml` to `rollout-patch.yaml` and update its content:
-        ```yaml
-        # week2/day11/app/frontend-dev/overlays/dev/rollout-patch.yaml
-        apiVersion: argoproj.io/v1alpha1
-        kind: Rollout
-        metadata:
-          name: echo-frontend
-        spec:
-          replicas: 1 # Replica count for dev
-        ```
-    * Update the `kustomization.yaml` to use the new patch:
-        ```yaml
-        # week2/day11/app/frontend-dev/overlays/dev/kustomization.yaml
-        apiVersion: kustomize.config.k8s.io/v1beta1
-        kind: Kustomization
-        resources:
-        - ../../../base
-        patches:
-        - path: rollout-patch.yaml
-        ```
-    * **Important**: Make the same changes for the `frontend-staging` overlay directory.
-
-5.  **Update ApplicationSet and Sync**:
-    * Modify your local `frontend-appset.yaml` (from Day 8) to point its `path` to the new `week2/day11/app/*` directory.
-    * Apply the change: `kubectl apply -f frontend-appset.yaml`.
-    * Commit and push your new `week2/day11` directory to Git.
-
-6.  **Trigger and Observe the Rollout**:
-    * To trigger a new rollout, change the image tag in `week2/day11/appsfrontend-dev/base/rollout.yaml` (e.g., to `nginx:1.24`). Commit and push.
-    * Watch in the Argo CD UI as your applications become `Progressing` and the canary strategy is executed.
+6.  **Observe the Fix**:
+    * Apply the updated `frontend-appset.yaml`. Argo CD will re-configure the generated applications.
+    * `Refresh` the `frontend-dev` application in the UI. It should now be `Synced`, even though the extra label is still on the live resource in the cluster. You've successfully told Argo CD to ignore this specific difference.
 
 ---
 ### 🤔 Daily Self-Assessment
 
-**Question**: When you use Argo CD to manage an Argo Rollouts `Rollout` object, which controller is actually responsible for pausing the deployment, creating new `ReplicaSets`, and shifting traffic?
+**Question**: Besides a service mesh sidecar injector, what is another common Kubernetes controller that automatically modifies a workload's `spec` and would likely require you to use `ignoreDifferences` in a GitOps workflow?
 
-**Answer**: The **Argo Rollouts controller**. Argo CD's job is just to apply the `Rollout` manifest from Git; the specialized Rollouts controller then reads that resource and executes the progressive delivery strategy.
+**Answer**: A **Horizontal Pod Autoscaler (HPA)**. The HPA controller constantly updates the `spec.replicas` field of a `Deployment` or `Rollout` based on CPU/memory metrics, which would cause a constant `OutOfSync` condition if not ignored.
+    
