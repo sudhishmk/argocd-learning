@@ -1,6 +1,6 @@
 # week1/day4/overlays/dev/deployment-patch.yaml
 apiVersion: apps/v1
-kind: Deployment
+kind: Rollout
 metadata:
   name: echo-frontend # Must match the name in the base deployment.yaml
 spec:
