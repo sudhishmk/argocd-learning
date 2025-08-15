@@ -4,4 +4,4 @@ kind: Rollout
 metadata:
   name: echo-frontend # Must match the name in the base deployment.yaml
 spec:
-  replicas: 1 # Dev environment only gets 1 replica
+  replicas: 4 # Dev environment only gets 1 replica
