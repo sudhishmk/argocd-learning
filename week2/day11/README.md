@@ -45,9 +45,9 @@ spec:
 
 ### 🛠️ Daily Task
 
-Today, you'll convert the `echo-frontend` `Deployment` managed by your Day 8 `ApplicationSet` into a `Rollout`.
+Today, you'll convert your `echo-frontend` `Deployment` into a `Rollout` and correctly update your Kustomize overlay to match.
 
-1.  **Install Argo Rollouts Controller**: This is a one-time setup. The controller must be running in your cluster to manage `Rollout` resources.
+1.  **Install Argo Rollouts Controller**: This is a one-time setup. The controller must be running in your cluster.
     ```bash
     kubectl create namespace argo-rollouts
     kubectl apply -n argo-rollouts -f [https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml](https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml)
@@ -58,58 +58,66 @@ Today, you'll convert the `echo-frontend` `Deployment` managed by your Day 8 `Ap
     cp -r week2/day8/ week2/day11/
     ```
 
-3.  **Convert Deployment to Rollout**: Since both `frontend-dev` and `frontend-staging` use the same `base`, you only need to change it in one place. Edit the `deployment.yaml` file located in `week2/day11/apps/frontend-dev/base/`.
-    * Change `apiVersion: apps/v1` to `apiVersion: argoproj.io/v1alpha1`.
-    * Change `kind: Deployment` to `kind: Rollout`.
-    * Add the `strategy` block for a canary release.
-    * rename the file to `rollout.yaml`
-    * Your final file (which is now a Rollout manifest) should look like this:
+3.  **Convert Base Resource to a Rollout**: In your new `week2/day11/app/frontend-dev/base/`, rename `deployment.yaml` to `rollout.yaml` and change its content to be a `Rollout` resource. Also update the `kustomization.yaml` in the `base` to point to the new filename.
+    ```yaml
+
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    metadata:
+      name: echo-frontend
+    spec:
+      replicas: 1 # This will be patched by Kustomize
+      selector:
+        matchLabels:
+          app: echo-frontend
+      template:
+        metadata:
+          labels:
+            app: echo-frontend
+        spec:
+          containers:
+          - name: nginx
+            image: nginx:1.25
+            ports:
+            - containerPort: 80
+      strategy:
+        canary:
+          steps:
+          - setWeight: 25
+          - pause: { duration: 30s }
+    ```
+
+4.  **Update Kustomize Overlay (The Fix!)**: Your overlay is still trying to patch a `Deployment`. You must update it to patch the `Rollout`. Go into `week2/day11/app/frontend-dev/overlays/dev/`.
+    * Rename `deployment-patch.yaml` to `rollout-patch.yaml` and update its content:
         ```yaml
-   
+        # week2/day11/app/frontend-dev/overlays/dev/rollout-patch.yaml
         apiVersion: argoproj.io/v1alpha1
         kind: Rollout
         metadata:
           name: echo-frontend
         spec:
-          replicas: 1 # This will be patched by Kustomize
-          selector:
-            matchLabels:
-              app: echo-frontend
-          template:
-            metadata:
-              labels:
-                app: echo-frontend
-            spec:
-              containers:
-              - name: nginx
-                image: nginx:1.25
-                ports:
-                - containerPort: 80
-          strategy:
-            canary:
-              steps:
-              - setWeight: 25
-              - pause: { duration: 30s } # Pause for 30s then auto-promote
+          replicas: 1 # Replica count for dev
         ```
-
-4.  **Update ApplicationSet and Sync**:
-    * Modify your local `frontend-appset.yaml` (the one from Day 8) to point its `path` to the new `week2/day11/app/*` directory.
+    * Update the `kustomization.yaml` to use the new patch:
         ```yaml
-        # In frontend-appset.yaml
-        spec:
-          generators:
-          - git:
-              # ...
-              directories:
-              - path: week2/day11/app/* # Update this path
-          # ...
+        # week2/day11/app/frontend-dev/overlays/dev/kustomization.yaml
+        apiVersion: kustomize.config.k8s.io/v1beta1
+        kind: Kustomization
+        resources:
+        - ../../../base
+        patches:
+        - path: rollout-patch.yaml
         ```
+    * **Important**: Make the same changes for the `frontend-staging` overlay directory.
+
+5.  **Update ApplicationSet and Sync**:
+    * Modify your local `frontend-appset.yaml` (from Day 8) to point its `path` to the new `week2/day11/app/*` directory.
     * Apply the change: `kubectl apply -f frontend-appset.yaml`.
     * Commit and push your new `week2/day11` directory to Git.
 
-5.  **Trigger and Observe the Rollout**:
-    * To trigger a new rollout, go to `week2/day11/apps/frontend-dev/base/rollout.yaml` in your Git repo and change the nginx image tag (e.g., from `nginx:1.25` to `nginx:1.24`). Commit and push.
-    * Watch the `frontend-dev` application in the Argo CD UI. They will change to `Progressing` and create new `ReplicaSets`. They will pause as defined in your strategy, then automatically promote and complete the sync.
+6.  **Trigger and Observe the Rollout**:
+    * To trigger a new rollout, change the image tag in `week2/day11/appsfrontend-dev/base/rollout.yaml` (e.g., to `nginx:1.24`). Commit and push.
+    * Watch in the Argo CD UI as your applications become `Progressing` and the canary strategy is executed.
 
 ---
 ### 🤔 Daily Self-Assessment
