@@ -27,7 +27,7 @@ spec:
             drop:
               - ALL # Drop all linux capabilities
         ports:
-        - containerPort: 80
+        - containerPort: 8080
   strategy:
     canary:
       steps:
