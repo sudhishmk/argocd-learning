@@ -1,0 +1,7 @@
+# week1/day4/overlays/dev/deployment-patch.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: echo-frontend # Must match the name in the base deployment.yaml
+spec:
+  replicas: 4 # Dev environment only gets 1 replica
