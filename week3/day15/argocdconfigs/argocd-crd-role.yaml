@@ -14,3 +14,9 @@ rules:
   - watch
   - patch
   - delete
+- apiGroups:
+  - mycorp.com
+  resources:
+  - dbbackups
+  verbs:
+  - "*"
