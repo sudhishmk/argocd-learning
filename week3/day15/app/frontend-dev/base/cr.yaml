@@ -1,0 +1,8 @@
+apiVersion: mycorp.com/v1
+kind: DbBackup
+metadata:
+  name: my-first-backup
+spec:
+  database: postgres
+status:
+  phase: Succeeded

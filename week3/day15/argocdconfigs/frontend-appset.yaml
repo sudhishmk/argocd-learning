@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: echo-frontend-appset
+  namespace: openshift-gitops
+spec:
+  generators:
+  - git:
+      repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
+      revision: HEAD
+      directories:
+      - path: week3/day15/app/*
+  template:
+    metadata:
+      name: '{{path.basename}}' # Will be 'frontend-dev', 'frontend-staging'
+    spec:
+      project: echo-apps
+      ignoreDifferences:
+      - group: argoproj.io
+        kind: Rollout
+        jsonPointers:
+        - /metadata/labels/mutated-by
+      source:
+        repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
+        targetRevision: HEAD
+        path: '{{path}}/overlays/dev' 
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
