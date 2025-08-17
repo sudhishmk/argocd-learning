@@ -1,110 +1,132 @@
-# Week 2, Day 14: Custom Resource Health Checks
+# Week 3, Day 15: Layered Security - AppProjects and Kubernetes RBAC
 
 ---
 ## 🧠 Concept of the Day
 
-Argo CD has built-in knowledge of the health of standard Kubernetes resources. It knows a `Deployment` is healthy when its replicas are available, and a `Job` is healthy when it completes successfully.
+Today's concept is **Layered Security**. When troubleshooting Argo CD permissions, you're dealing with two independent security layers that must both allow an operation to succeed.
 
-However, when you use Operators, you introduce Custom Resources (CRs). Argo CD doesn't natively understand the health of a `Prometheus` CR from the Prometheus Operator or a `Vault` CR from the Vault Operator.
+1.  **Layer 1: Argo CD `AppProject` Rules**: This is Argo CD's internal security. The `AppProject` defines what an application is *allowed to ask for*. It governs source repos, destination namespaces, and the types of resources (`clusterResourceWhitelist`/`Blacklist`) an application can contain. An error like "...not permitted in project..." comes from this layer.
 
-To solve this, you can teach Argo CD how to assess the health of *any* resource by providing a **custom health check written in Lua**. These Lua scripts are configured in the `argocd-cm` `ConfigMap`. The script receives the full Kubernetes object as input and must return a status (`Healthy`, `Progressing`, `Degraded`, etc.) and an optional message.
+2.  **Layer 2: Kubernetes RBAC**: This is the cluster's main security system. It defines what the Argo CD controller's `ServiceAccount` is actually *allowed to do* in the cluster. An error like "...cannot create resource..." comes from this layer.
+
+Think of it like this: The `AppProject` is the **company policy** that says you're allowed to request a keycard for the server room. Kubernetes RBAC is the **security guard** who checks the master list to see if you're actually authorized to be given one. Both must approve.
 
 ---
 ## 💼 Real-World Use Case
 
-A team is using the Strimzi operator to manage Kafka clusters. They deploy a `Kafka` custom resource. By default, Argo CD just shows this resource as `Synced`.
+A platform team onboards a new application that uses a custom `RedisCluster` CRD. To do this securely, they perform two distinct actions:
+1.  **As Cluster Admins (Layer 2)**, they create a `ClusterRole` and `ClusterRoleBinding` that grants the Argo CD controller's `ServiceAccount` the permission to create, update, and delete `RedisCluster` resources.
+2.  **As Argo CD Admins (Layer 1)**, they create an `AppProject` for the new application. In this project, they add the `redis.redis.opstreelabs.in` API group to the `clusterResourceWhitelist` to allow the application to contain `RedisCluster` manifests.
 
-An SRE writes a custom health check for the `kafka.strimzi.io/Kafka` resource. The Lua script inspects the `status.listeners` and `status.conditions` fields of the CR. It returns a `Healthy` status only when all listeners are ready and the `Ready` condition is true. This makes Argo CD's health status a true reflection of the Kafka cluster's state, enabling safer automated deployments that depend on Kafka being ready.
+With both layers configured, the application can now be deployed successfully and securely.
 
 ---
 ## 💻 Code/Config Example
 
-This YAML snippet shows how a Lua health check for a custom resource is added to the `argocd-cm` `ConfigMap`.
+A complete, proactive security setup requires configuring both layers.
 
 ```yaml
-# In the argocd-cm ConfigMap
-data:
-  resource.customizations.health.mycorp.com_CronJob: |
-    hs = {}
-    if obj.status ~= nil and obj.status.lastScheduleTime ~= nil then
-      hs.status = "Healthy"
-      hs.message = "Last run at: " .. obj.status.lastScheduleTime
-      return hs
-    end
-    hs.status = "Progressing"
-    hs.message = "Waiting for first run"
-    return hs
+# Layer 2: A ClusterRole granting permissions on the custom resource
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: my-custom-resource-manager
+rules:
+- apiGroups: ["mycorp.com"]
+  resources: ["dbbackups"]
+  verbs: ["*"]
+---
+# Layer 1: An AppProject allowing the custom resource
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: my-project
+spec:
+  # ... destinations, sourceRepos ...
+  clusterResourceWhitelist:
+  - group: 'mycorp.com'
+    kind: 'DbBackup'
 ```
+
 ### 🛠️ Daily Task
 
-Today, you'll create a dummy Custom Resource and write a Lua health check to teach Argo CD how to understand its status.
+Today, you'll proactively configure both security layers to avoid the errors you discovered.
 
-1.  **Repo Setup**: Copy your work from Day 13 to a new directory.
+1.  **Repo Setup**: Copy your work from Day 14 to a new directory.
     ```bash
-    cp -r week2/day13/ week2/day14/
+    cp -r week2/day14/ week3/day15/
     ```
 
-2.  **Update ApplicationSet Path**: Modify your `frontend-appset.yaml` to point to the new `week2/day14/app/*` directory. Commit the new folder to Git and apply the `ApplicationSet` change.
-
-3.  **Create a Dummy CRD and CR**: In your new `week2/day14/app/frontend-dev/base/` directory, create two new files:
-    * `crd.yaml`: Defines a simple custom resource.
+2.  **Step A: Configure Kubernetes RBAC (Layer 2)**: First, as a cluster admin, you need to grant the Argo CD controller permission to manage `DbBackup` resources.
+    * Create a file named `dbbackup-rbac.yaml`:
         ```yaml
-        apiVersion: apiextensions.ks.io/v1
-        kind: CustomResourceDefinition
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
         metadata:
-          name: dbbackups.mycorp.com
-        spec:
-          group: mycorp.com
-          names:
-            kind: DbBackup
-            plural: dbbackups
-            singular: dbbackup
-          scope: Namespaced
-          versions:
-          - name: v1
-            schema:
-              openAPIV3Schema:
-                type: object
-                properties:
-                  spec:
-                    type: object
-                    properties:
-                      database: {type: string}
-                  status:
-                    type: object
-                    properties:
-                      phase: {type: string}
-            served: true
-            storage: true
+          name: argocd-dbbackup-manager-role
+        rules:
+        - apiGroups: ["mycorp.com"]
+          resources: ["dbbackups"]
+          verbs: ["*"]
+        ---
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: argocd-dbbackup-manager-binding
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: argocd-dbbackup-manager-role
+        subjects:
+        - kind: ServiceAccount
+          namespace: openshift-gitops
+          name: openshift-gitops-argocd-application-controller
         ```
-    * `cr.yaml`: An instance of our new custom resource.
+    * Apply it directly to your cluster: `kubectl apply -f dbbackup-rbac.yaml`.
+
+3.  **Step B: Configure the AppProject (Layer 1)**: Now, create the `AppProject` with the correct whitelist from the start.
+    * Create a file named `echo-project.yaml`:
         ```yaml
-        apiVersion: [mycorp.com/v1](https://mycorp.com/v1)
-        kind: DbBackup
+        apiVersion: argoproj.io/v1alpha1
+        kind: AppProject
         metadata:
-          name: my-first-backup
+          name: echo-apps
+          namespace: argocd
         spec:
-          database: postgres
-        status:
-          phase: Succeeded
+          description: Project for the Echo applications
+          sourceRepos:
+          - '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
+          destinations:
+          - server: '[https://kubernetes.default.svc](https://kubernetes.default.svc)'
+            namespace: 'frontend-*'
+          # Proactively whitelist the CRD and the CR
+          clusterResourceWhitelist:
+          - group: 'apiextensions.k8s.io'
+            kind: 'CustomResourceDefinition'
+          - group: 'mycorp.com'
+            kind: 'DbBackup'
         ```
+    * Apply it: `kubectl apply -f echo-project.yaml`.
 
-4.  **Update Kustomization**: Add the new CRD and CR to your `week2/day14/apps/frontend-dev/base/kustomization.yaml`.
-
-5.  **Apply the Custom Health Check**: Add the Lua script to Argo CD's central `ConfigMap`. Run this `kubectl` command:
-    ```bash
-    kubectl patch configmap argocd-cm -n argocd --type merge -p '{"data":{"resource.customizations.health.mycorp.com_DbBackup":"hs = {}\nif obj.status ~= nil and obj.status.phase ~= nil then\n  if obj.status.phase == \"Succeeded\" then\n    hs.status = \"Healthy\"\n    hs.message = \"Backup Succeeded\"\n    return hs\n  end\n  if obj.status.phase == \"Failed\" then\n    hs.status = \"Degraded\"\n    hs.message = \"Backup Failed\"\n    return hs\n  end\n  hs.status = \"Progressing\"\n  hs.message = \"Backup is running\"\n  return hs\nend\nhs.status = \"Progressing\"\nhs.message = \"Waiting for status\"\nreturn hs\n"}}'
+4.  **Update the ApplicationSet**: Modify your `frontend-appset.yaml` to use the new project and point to the day 15 directory.
+    ```yaml
+    # In frontend-appset.yaml
+    spec:
+      generators:
+      - git:
+          directories:
+          - path: week3/day15/apps/* # Update path
+      template:
+        spec:
+          project: echo-apps # Assign to the new project
     ```
+    * Apply the change: `kubectl apply -f frontend-appset.yaml`.
 
-6.  **Commit and Observe**:
-    * Commit and push your changes to Git.
-    * In the Argo CD UI, `Refresh` and `Sync` your applications.
-    * Find the new `DbBackup` resource. Its health status will be `Healthy` with the message "Backup Succeeded" because our Lua script successfully parsed the `status.phase` field.
+5.  **Commit and Sync**: Commit your `week3/day15` directory. The application should sync without any permission errors because you've correctly configured both security layers.
 
 ---
 ### 🤔 Daily Self-Assessment
 
-**Question**: Where are custom resource health checks configured, and in what programming language are they written?
+**Question**: An application sync fails with the error message "resource Services is not permitted in project my-app". Which security layer is responsible for this error: the `AppProject` or Kubernetes RBAC?
 
-**Answer**: They are configured in the `data` section of the `argocd-cm` `ConfigMap` and are written in **Lua**.
-
+**Answer**: The **`AppProject` (Layer 1)**. The error message explicitly mentions the project, indicating it's an internal Argo CD policy that's blocking the sync.
