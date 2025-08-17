@@ -2,8 +2,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: argocd-crd-manager-role
-  annotations:
-    argocd.argoproj.io/sync-wave: "-10"
 rules:
 - apiGroups:
   - apiextensions.k8s.io
