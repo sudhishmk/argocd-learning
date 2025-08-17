@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-crd-manager-binding
+  annotations:
+    argocd.argoproj.io/sync-wave: "-8"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-crd-manager-role
+subjects:
+- kind: ServiceAccount
+  # Use the exact namespace and name from your error message
+  namespace: openshift-gitops
+  name: openshift-gitops-argocd-application-controller
