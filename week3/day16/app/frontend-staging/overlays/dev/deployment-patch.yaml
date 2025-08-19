@@ -1,0 +1,6 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-frontend # Must match the name in the base deployment.yaml
+spec:
+  replicas: 3 # Staging environment gets 3 replica
