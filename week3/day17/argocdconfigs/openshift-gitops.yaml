@@ -1,6 +1,5 @@
 apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
-metadata:
   name: openshift-gitops
   namespace: openshift-gitops
 spec:
@@ -84,17 +83,21 @@ spec:
         cpu: 250m
         memory: 256Mi
     sidecarContainers:
-      - command:
-          - sleep
-          - infinity
+      - args:
+          - |-
+            wget -O argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v1.6.0/argocd-vault-plugin_1.6.0_linux_amd64
+            chmod +x argocd-vault-plugin &&\ mv argocd-vault-plugin /custom-tools/
+        command:
+          - sh
+          - '-c'
         image: 'quay.io/rhn-support-sudnair/wget:1.0'
         name: custom-tools
         volumeMounts:
-          - mountPath: /tmp
-            name: cmp-tmp
+          - mountPath: /custom-tools
+            name: custom-tools
     volumes:
       - emptyDir: {}
-        name: cmp-tmp
+        name: custom-tools
   resourceExclusions: |
     - apiGroups:
       - tekton.dev
@@ -145,3 +148,19 @@ spec:
     provider: dex
   tls:
     ca: {}
+status:
+  applicationController: Running
+  applicationSetController: Running
+  conditions:
+    - lastTransitionTime: '2025-08-22T07:56:16Z'
+      message: ''
+      reason: Success
+      status: 'True'
+      type: Reconciled
+  host: openshift-gitops-server-openshift-gitops.apps.rh96ocp41815rdu.lab.upshift.rdu2.redhat.com
+  phase: Available
+  redis: Running
+  repo: Running
+  server: Running
+  sso: Running
+

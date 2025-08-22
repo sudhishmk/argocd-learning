@@ -46,8 +46,9 @@ Today, you'll configure Argo CD with a Vault plugin and create a manifest with p
 
     # Install wget and tar, then download and install Helm v2
     RUN dnf install -y wget tar gzip && \
-        wget -qO- https://get.helm.sh/helm-v2.12.3-linux-amd64.tar.gz | tar -xvzf - && \
-        mv linux-amd64/helm /usr/local/bin/helm && \
+        mkdir /custom-tools && \
+        wget -qO /custom-tools/argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v1.6.0/argocd-vault-plugin_1.6.0_linux_amd64 && \
+        chmod +x /custom-tools/argocd-vault-plugin && \
         dnf clean all
 
     # IMPORTANT: Switch back to a non-root user to run securely
@@ -63,17 +64,21 @@ Today, you'll configure Argo CD with a Vault plugin and create a manifest with p
           # ... other configurations ...
           repo:
             sidecarContainers:
-              - command:
-                  - sleep
-                  - infinity
-                image: 'quay.io/your_repo/wget:1.0'
+              - args:
+                  - |-
+                    wget -O argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v1.6.0/argocd-vault-plugin_1.6.0_linux_amd64
+                    chmod +x argocd-vault-plugin &&\ mv argocd-vault-plugin /custom-tools/
+                command:
+                  - sh
+                  - '-c'
+                image: 'quay.io/rhn-support-sudnair/wget:1.0'
                 name: custom-tools
                 volumeMounts:
-                  - mountPath: /tmp
-                    name: cmp-tmp
+                  - mountPath: /custom-tools
+                    name: custom-tools
             volumes:
               - emptyDir: {}
-                name: cmp-tmp
+                name: custom-tools
         ```
     * Save the file. The Operator will automatically restart the `argocd-repo-server` pod with the plugin correctly installed.
     * **Note**: If your cluster is in a restricted network, you may need to mirror this `quay.io` image to your internal registry and update the `image:` field above.
