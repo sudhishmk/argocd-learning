@@ -1,132 +1,104 @@
-# Week 3, Day 15: Layered Security - AppProjects and Kubernetes RBAC
+# Week 3, Day 18: Managing Secrets with Sealed Secrets
 
 ---
 ## 🧠 Concept of the Day
 
-Today's concept is **Layered Security**. When troubleshooting Argo CD permissions, you're dealing with two independent security layers that must both allow an operation to succeed.
+**Sealed Secrets** is a Kubernetes controller and toolset designed to solve one problem: how to safely store secrets in a public Git repository.
 
-1.  **Layer 1: Argo CD `AppProject` Rules**: This is Argo CD's internal security. The `AppProject` defines what an application is *allowed to ask for*. It governs source repos, destination namespaces, and the types of resources (`clusterResourceWhitelist`/`Blacklist`) an application can contain. An error like "...not permitted in project..." comes from this layer.
-
-2.  **Layer 2: Kubernetes RBAC**: This is the cluster's main security system. It defines what the Argo CD controller's `ServiceAccount` is actually *allowed to do* in the cluster. An error like "...cannot create resource..." comes from this layer.
-
-Think of it like this: The `AppProject` is the **company policy** that says you're allowed to request a keycard for the server room. Kubernetes RBAC is the **security guard** who checks the master list to see if you're actually authorized to be given one. Both must approve.
+It works using asymmetric encryption with a public/private key pair that is unique to your cluster:
+1.  **Controller:** A controller runs in your cluster. On startup, it generates a private key (which it keeps secret) and a public key (which it makes available to you).
+2.  **`kubeseal` CLI:** You use a command-line tool called `kubeseal` on your local machine. You feed it a regular Kubernetes `Secret` manifest. `kubeseal` fetches the public key from the controller and uses it to encrypt your secret data.
+3.  **`SealedSecret` CRD:** The output is a new Custom Resource of `kind: SealedSecret`. This manifest contains your encrypted data and is **safe to commit to Git**.
+4.  **Decryption:** When Argo CD syncs the `SealedSecret` resource, the controller in the cluster recognizes it. Since only the controller has the private key, it's the only thing that can decrypt the data and create a standard Kubernetes `Secret` in the cluster.
 
 ---
 ## 💼 Real-World Use Case
 
-A platform team onboards a new application that uses a custom `RedisCluster` CRD. To do this securely, they perform two distinct actions:
-1.  **As Cluster Admins (Layer 2)**, they create a `ClusterRole` and `ClusterRoleBinding` that grants the Argo CD controller's `ServiceAccount` the permission to create, update, and delete `RedisCluster` resources.
-2.  **As Argo CD Admins (Layer 1)**, they create an `AppProject` for the new application. In this project, they add the `redis.redis.opstreelabs.in` API group to the `clusterResourceWhitelist` to allow the application to contain `RedisCluster` manifests.
+A developer needs to add a database password for their application. They create a standard `Secret` YAML file on their laptop containing the password. They run `kubeseal` against this file, which generates a `sealed-secret-db.yaml` file. The original file with the plain-text password is never committed to Git.
 
-With both layers configured, the application can now be deployed successfully and securely.
+The developer adds the `sealed-secret-db.yaml` to their Kustomize base, commits it, and creates a pull request. The encrypted secret can be safely reviewed by teammates. Once merged, Argo CD syncs the `SealedSecret`, and the controller in the cluster securely decrypts it, creating the final `Secret` resource for the application to use.
 
 ---
 ## 💻 Code/Config Example
 
-A complete, proactive security setup requires configuring both layers.
-
+You start with a normal, plain-text secret (DO NOT COMMIT THIS):
 ```yaml
-# Layer 2: A ClusterRole granting permissions on the custom resource
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+apiVersion: v1
+kind: Secret
 metadata:
-  name: my-custom-resource-manager
-rules:
-- apiGroups: ["mycorp.com"]
-  resources: ["dbbackups"]
-  verbs: ["*"]
----
-# Layer 1: An AppProject allowing the custom resource
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: my-project
-spec:
-  # ... destinations, sourceRepos ...
-  clusterResourceWhitelist:
-  - group: 'mycorp.com'
-    kind: 'DbBackup'
+  name: my-api-key
+  namespace: my-app
+data:
+  API_KEY: "c3VwZXJzZWNyZXR2YWx1ZQ==" # "supersecretvalue" base64 encoded
 ```
 
+After running kubeseal, you get a SealedSecret that is safe to commit:
+
+```
+apiVersion: [bitnami.com/v1alpha1](https://bitnami.com/v1alpha1)
+kind: SealedSecret
+metadata:
+  name: my-api-key
+  namespace: my-app
+spec:
+  encryptedData:
+    API_KEY: AgA...[long encrypted string]...==
+  template:
+    metadata:
+      name: my-api-key
+      namespace: my-app
+      ```
 ### 🛠️ Daily Task
 
-Today, you'll proactively configure both security layers to avoid the errors you discovered.
+Today, you'll install Sealed Secrets and use it to encrypt and deploy a secret.
 
-1.  **Repo Setup**: Copy your work from Day 14 to a new directory.
+1.  **Install the Sealed Secrets Controller**: This is a one-time setup for your cluster.
     ```bash
-    cp -r week2/day14/ week3/day15/
+    kubectl apply -f [https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.26.1/controller.yaml](https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.26.1/controller.yaml)
     ```
 
-2.  **Step A: Configure Kubernetes RBAC (Layer 2)**: First, as a cluster admin, you need to grant the Argo CD controller permission to manage `DbBackup` resources.
-    * Create a file named `dbbackup-rbac.yaml`:
-        ```yaml
-        apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRole
-        metadata:
-          name: argocd-dbbackup-manager-role
-        rules:
-        - apiGroups: ["mycorp.com"]
-          resources: ["dbbackups"]
-          verbs: ["*"]
-        ---
-        apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRoleBinding
-        metadata:
-          name: argocd-dbbackup-manager-binding
-        roleRef:
-          apiGroup: rbac.authorization.k8s.io
-          kind: ClusterRole
-          name: argocd-dbbackup-manager-role
-        subjects:
-        - kind: ServiceAccount
-          namespace: openshift-gitops
-          name: openshift-gitops-argocd-application-controller
-        ```
-    * Apply it directly to your cluster: `kubectl apply -f dbbackup-rbac.yaml`.
+2.  **Install the `kubeseal` CLI**: Download the `kubeseal` binary for your OS from the [official releases page](https://github.com/bitnami-labs/sealed-secrets/releases) and place it in your PATH.
 
-3.  **Step B: Configure the AppProject (Layer 1)**: Now, create the `AppProject` with the correct whitelist from the start.
-    * Create a file named `echo-project.yaml`:
-        ```yaml
-        apiVersion: argoproj.io/v1alpha1
-        kind: AppProject
-        metadata:
-          name: echo-apps
-          namespace: argocd
-        spec:
-          description: Project for the Echo applications
-          sourceRepos:
-          - '[https://github.com/YOUR_USERNAME/argocd-learning.git](https://github.com/YOUR_USERNAME/argocd-learning.git)'
-          destinations:
-          - server: '[https://kubernetes.default.svc](https://kubernetes.default.svc)'
-            namespace: 'frontend-*'
-          # Proactively whitelist the CRD and the CR
-          clusterResourceWhitelist:
-          - group: 'apiextensions.k8s.io'
-            kind: 'CustomResourceDefinition'
-          - group: 'mycorp.com'
-            kind: 'DbBackup'
-        ```
-    * Apply it: `kubectl apply -f echo-project.yaml`.
-
-4.  **Update the ApplicationSet**: Modify your `frontend-appset.yaml` to use the new project and point to the day 15 directory.
-    ```yaml
-    # In frontend-appset.yaml
-    spec:
-      generators:
-      - git:
-          directories:
-          - path: week3/day15/apps/* # Update path
-      template:
-        spec:
-          project: echo-apps # Assign to the new project
+3.  **Fetch the Public Key**: The `kubeseal` CLI needs to get the public key from the controller. It can do this automatically. Run this command to fetch the certificate and save it locally. This command may take 10-20 seconds to run the first time.
+    ```bash
+    kubeseal --fetch-cert > pub-cert.pem
     ```
-    * Apply the change: `kubectl apply -f frontend-appset.yaml`.
 
-5.  **Commit and Sync**: Commit your `week3/day15` directory. The application should sync without any permission errors because you've correctly configured both security layers.
+4.  **Create and Seal a Secret**:
+    * First, create a regular, plain-text secret manifest locally. Name it `my-plain-secret.yaml`.
+        ```yaml
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: frontend-secret
+          namespace: frontend-dev # Important: namespace must match the destination
+        stringData:
+          API_KEY: "ThisIsMySuperSecretDevKey"
+        ```
+    * Now, use `kubeseal` to encrypt it. This reads your plain secret, encrypts it using the public key, and outputs the `SealedSecret` manifest.
+        ```bash
+        kubeseal --cert pub-cert.pem --format yaml < my-plain-secret.yaml > sealed-secret.yaml
+        ```
+
+5.  **Add Sealed Secret to Git**:
+    * Copy the new `sealed-secret.yaml` file (the encrypted one) into your `week3/day15/apps/frontend-dev/base` directory. **Do not commit `my-plain-secret.yaml` or `pub-cert.pem`!**
+    * Update the `kustomization.yaml` in that directory to include `sealed-secret.yaml` in its resources list.
+
+6.  **Commit, Sync, and Verify**:
+    * Commit and push your changes. Your Argo CD application (`frontend-dev`) will become `OutOfSync`.
+    * `Sync` the application. You will see the `SealedSecret` resource get created.
+    * A moment later, the Sealed Secrets controller will create the standard `Secret`. Verify this with `kubectl`:
+        ```bash
+        # You should see the 'SealedSecret' you deployed from Git
+        kubectl get sealedsecret frontend-secret -n frontend-dev
+
+        # You should see the normal 'Secret' created by the controller
+        kubectl get secret frontend-secret -n frontend-dev -o yaml
+        ```
 
 ---
 ### 🤔 Daily Self-Assessment
 
-**Question**: An application sync fails with the error message "resource Services is not permitted in project my-app". Which security layer is responsible for this error: the `AppProject` or Kubernetes RBAC?
+**Question**: In the Sealed Secrets model, which component holds the private key and is responsible for decrypting the `SealedSecret`?
 
-**Answer**: The **`AppProject` (Layer 1)**. The error message explicitly mentions the project, indicating it's an internal Argo CD policy that's blocking the sync.
+**Answer**: The **Sealed Secrets controller** running inside the Kubernetes cluster.
