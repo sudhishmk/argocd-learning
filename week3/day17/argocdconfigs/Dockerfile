@@ -1,15 +1,21 @@
-# Start from the Red Hat Universal Base Image
-FROM registry.access.redhat.com/ubi9/ubi:9.6-1755678605
-
-# Switch to the root user temporarily to install tools
+FROM argoproj/argocd:v2.6.15
+# Switch to root for the ability to perform install
 USER root
 
-# Install wget and tar, then download and install Helm v2
-RUN dnf install -y wget tar gzip && \
-    mkdir /custom-tools && \
-    wget -qO /custom-tools/argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v1.6.0/argocd-vault-plugin_1.6.0_linux_amd64 && \
-    chmod +x /custom-tools/argocd-vault-plugin && \
-    dnf clean all
+# Install tools needed for your repo-server to retrieve & decrypt secrets, render manifests
+# (e.g. curl, awscli, gpg, sops)
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        awscli \
+        gpg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# IMPORTANT: Switch back to a non-root user to run securely
-USER 1001
+# Install the AVP plugin (as root so we can copy to /usr/local/bin)
+RUN curl -L -o argocd-vault-plugin https://github.com/IBM/argocd-vault-plugin/releases/download/v1.18.1/argocd-vault-plugin_1.18.1_linux_amd64
+RUN chmod +x argocd-vault-plugin
+RUN mv argocd-vault-plugin /usr/local/bin
+
+# Switch back to non-root user
+USER argocd

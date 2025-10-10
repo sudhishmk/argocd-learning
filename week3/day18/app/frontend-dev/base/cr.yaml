@@ -1,0 +1,10 @@
+apiVersion: mycorp.com/v1
+kind: DbBackup
+metadata:
+  name: my-first-backup
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  database: postgres
+status:
+  phase: Succeeded

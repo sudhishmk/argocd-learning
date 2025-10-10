@@ -5,33 +5,42 @@ metadata:
   namespace: openshift-gitops
 spec:
   generators:
-  - git:
-      repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
-      revision: HEAD
-      directories:
-      - path: week3/day17/app/*
+    - git:
+        directories:
+          - path: week3/day17/app/*
+        repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
+        revision: HEAD
   template:
     metadata:
-      name: '{{path.basename}}' # Will be 'frontend-dev', 'frontend-staging'
+      name: '{{path.basename}}'
     spec:
-      project: echo-apps
+      destination:
+        namespace: '{{path.basename}}'
+        server: 'https://kubernetes.default.svc'
       ignoreDifferences:
-      - group: argoproj.io
-        kind: Rollout
-        jsonPointers:
-        - /metadata/labels/mutated-by
+        - group: argoproj.io
+          jsonPointers:
+            - /metadata/labels/mutated-by
+          kind: Rollout
+      project: echo-apps
       source:
+        path: '{{path}}/overlays/dev'
+        plugin:
+          env:
+            - name: AVP_K8S_ROLE
+              value: vplugin
+            - name: AVP_TYPE
+              value: vault
+            - name: AVP_VAULT_ADDR
+              value: 'http://172.30.189.194:8200'
+            - name: AVP_AUTH_TYPE
+              value: k8s
+          name: argocd-vault-plugin
         repoURL: 'https://github.com/sudhishmk/argocd-learning.git'
         targetRevision: HEAD
-        path: '{{path}}/overlays/dev' 
-        plugin:
-          name: argocd-vault-plugin
-      destination:
-        server: 'https://kubernetes.default.svc'
-        namespace: '{{path.basename}}'
       syncPolicy:
         automated:
           prune: true
           selfHeal: true
         syncOptions:
-        - CreateNamespace=true
+          - CreateNamespace=true

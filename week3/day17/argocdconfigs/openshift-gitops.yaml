@@ -1,111 +1,9 @@
 apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
+metadata:
   name: openshift-gitops
   namespace: openshift-gitops
 spec:
-  applicationSet:
-    resources:
-      limits:
-        cpu: '2'
-        memory: 1Gi
-      requests:
-        cpu: 250m
-        memory: 512Mi
-    webhookServer:
-      ingress:
-        enabled: false
-      route:
-        enabled: false
-  controller:
-    processors: {}
-    resources:
-      limits:
-        cpu: '2'
-        memory: 2Gi
-      requests:
-        cpu: 250m
-        memory: 1Gi
-    sharding: {}
-  grafana:
-    enabled: false
-    ingress:
-      enabled: false
-    resources:
-      limits:
-        cpu: 500m
-        memory: 256Mi
-      requests:
-        cpu: 250m
-        memory: 128Mi
-    route:
-      enabled: false
-  ha:
-    enabled: false
-    resources:
-      limits:
-        cpu: 500m
-        memory: 256Mi
-      requests:
-        cpu: 250m
-        memory: 128Mi
-  initialSSHKnownHosts: {}
-  monitoring:
-    enabled: false
-  notifications:
-    enabled: false
-  prometheus:
-    enabled: false
-    ingress:
-      enabled: false
-    route:
-      enabled: false
-  rbac:
-    defaultPolicy: ''
-    policy: |
-      g, system:cluster-admins, role:admin
-      g, cluster-admins, role:admin
-      g, sudhicomp:admins, role:admin
-    scopes: '[groups]'
-  redis:
-    resources:
-      limits:
-        cpu: 500m
-        memory: 256Mi
-      requests:
-        cpu: 250m
-        memory: 128Mi
-  repo:
-    resources:
-      limits:
-        cpu: '1'
-        memory: 1Gi
-      requests:
-        cpu: 250m
-        memory: 256Mi
-    sidecarContainers:
-      - args:
-          - |-
-            wget -O argocd-vault-plugin https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v1.6.0/argocd-vault-plugin_1.6.0_linux_amd64
-            chmod +x argocd-vault-plugin &&\ mv argocd-vault-plugin /custom-tools/
-        command:
-          - sh
-          - '-c'
-        image: 'quay.io/rhn-support-sudnair/wget:1.0'
-        name: custom-tools
-        volumeMounts:
-          - mountPath: /custom-tools
-            name: custom-tools
-    volumes:
-      - emptyDir: {}
-        name: custom-tools
-  resourceExclusions: |
-    - apiGroups:
-      - tekton.dev
-      clusters:
-      - '*'
-      kinds:
-      - TaskRun
-      - PipelineRun
   server:
     autoscale:
       enabled: false
@@ -125,6 +23,30 @@ spec:
       enabled: true
     service:
       type: ''
+  grafana:
+    enabled: false
+    ingress:
+      enabled: false
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 250m
+        memory: 128Mi
+    route:
+      enabled: false
+  monitoring:
+    enabled: false
+  notifications:
+    enabled: false
+  prometheus:
+    enabled: false
+    ingress:
+      enabled: false
+    route:
+      enabled: false
+  initialSSHKnownHosts: {}
   sso:
     dex:
       config: |
@@ -146,21 +68,76 @@ spec:
           cpu: 250m
           memory: 128Mi
     provider: dex
+  applicationSet:
+    resources:
+      limits:
+        cpu: '2'
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+    webhookServer:
+      ingress:
+        enabled: false
+      route:
+        enabled: false
+  rbac:
+    defaultPolicy: ''
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+      g, sudhicomp:admins, role:admin
+    scopes: '[groups]'
+  repo:
+    image: 'quay.io/rhn-support-sudnair/wget:1.0'
+    mountsatoken: true
+    resources:
+      limits:
+        cpu: '1'
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+    serviceaccount: vplugin
+  resourceExclusions: |
+    - apiGroups:
+      - tekton.dev
+      clusters:
+      - '*'
+      kinds:
+      - TaskRun
+      - PipelineRun
+  ha:
+    enabled: false
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 250m
+        memory: 128Mi
   tls:
     ca: {}
-status:
-  applicationController: Running
-  applicationSetController: Running
-  conditions:
-    - lastTransitionTime: '2025-08-22T07:56:16Z'
-      message: ''
-      reason: Success
-      status: 'True'
-      type: Reconciled
-  host: openshift-gitops-server-openshift-gitops.apps.rh96ocp41815rdu.lab.upshift.rdu2.redhat.com
-  phase: Available
-  redis: Running
-  repo: Running
-  server: Running
-  sso: Running
-
+  redis:
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 250m
+        memory: 128Mi
+  configManagementPlugins: |-
+    - name: argocd-vault-plugin
+      generate:
+        command: ["argocd-vault-plugin"]
+        args: ["generate", "./"]
+  controller:
+    processors: {}
+    resources:
+      limits:
+        cpu: '2'
+        memory: 2Gi
+      requests:
+        cpu: 250m
+        memory: 1Gi
+    sharding: {}

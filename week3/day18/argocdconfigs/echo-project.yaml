@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: echo-apps
+  namespace: argocd
+spec:
+  description: Project for the Echo Frontend applications
+  # Allow deployments only from your learning repository
+  sourceRepos:
+  - 'https://github.com/sudhishmk/argocd-learning.git'
+  # Allow deployments only to namespaces matching the pattern 'frontend-*'
+  destinations:
+  - server: 'https://kubernetes.default.svc'
+    namespace: 'frontend-*'
+  # Forbid this project from creating cluster-wide roles
+  clusterResourceBlacklist:
+  - group: '*'
+    kind: ClusterRole
+  - group: '*'
+    kind: ClusterRoleBinding
