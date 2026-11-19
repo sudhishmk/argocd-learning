@@ -22,6 +22,8 @@ The developer adds the `sealed-secret-db.yaml` to their Kustomize base, commits 
 ## 💻 Code/Config Example
 
 You start with a normal, plain-text secret (DO NOT COMMIT THIS):
+
+The repository includes `frontend-secret.example.yaml` with a placeholder. Copy it to `frontend-secret.yaml` locally, replace the placeholder, and do not commit the local file. Rotate any real API key used in an earlier commit.
 ```yaml
 apiVersion: v1
 kind: Secret
