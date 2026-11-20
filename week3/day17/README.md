@@ -1,5 +1,7 @@
 # Week 3, Day 17: Managing Secrets with HashiCorp Vault
 
+The GitHub OAuth values in `argocdconfigs/openshift-gitops.yaml` are placeholders. Supply a unique client ID and secret through a protected deployment process; do not commit the secret. If the OAuth secret from an earlier commit is still valid, revoke or rotate it in the GitHub OAuth app settings.
+
 ---
 ## 🧠 Concept of the Day
 

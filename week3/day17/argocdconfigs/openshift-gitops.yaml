@@ -55,8 +55,8 @@ spec:
             id: github
             name: GitHub
             config:
-              clientID: Ov23ligf6N8EtDFFtZ9l
-              clientSecret: 77b624c2aae3a57d1a8eb9822d70ae8be0a6ed15
+              clientID: REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID
+              clientSecret: REPLACE_WITH_GITHUB_OAUTH_CLIENT_SECRET
               orgs:
               - name: sudhicomp
       openShiftOAuth: true
